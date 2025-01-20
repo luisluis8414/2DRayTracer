@@ -14,5 +14,11 @@ class RayTracer {
   sf::RenderWindow m_window;
   TextRenderer m_textRenderer;
 
+  sf::CircleShape m_circle;
+
   void processSFMLEvents();
+
+  void updateLogic(float deltaTime);
+
+  void render();
 };
