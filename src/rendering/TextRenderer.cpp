@@ -7,7 +7,10 @@ TextRenderer::TextRenderer(const std::string& fontPath) : m_fpsText(m_font) {
   }
   m_fpsText.setFont(m_font);
   m_fpsText.setFillColor(sf::Color::Green);
-  m_fpsText.setString("FPS: 60");
+}
+
+void TextRenderer::setFpsText(int text) {
+  m_fpsText.setString(std::to_string(text));
 }
 
 void TextRenderer::draw(sf::RenderWindow& window) {

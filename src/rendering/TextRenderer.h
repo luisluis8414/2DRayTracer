@@ -12,6 +12,8 @@ class TextRenderer {
 
   void draw(sf::RenderWindow& window);
 
+  void setFpsText(int text);
+
  private:
   sf::Font m_font;
 

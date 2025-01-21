@@ -8,6 +8,22 @@
 
 RayTracer::RayTracer()
     : m_window(sf::VideoMode({800, 600}), "2D RayTracer"), m_textRenderer("resources/fonts/arial.ttf") {
+  initializeRays();
+
+  m_sun.setRadius(40.f);
+  m_sun.setOrigin({m_sun.getRadius(), m_sun.getRadius()});
+  m_sun.setPointCount(100);
+  m_sun.setFillColor(sf::Color(245, 176, 66));
+
+  m_obstacle.setRadius(80.f);
+  m_obstacle.setOrigin({m_obstacle.getRadius(), m_obstacle.getRadius()});
+  m_obstacle.setPointCount(100);
+  m_obstacle.setFillColor(sf::Color::Blue);
+
+  m_obstacle2.setRadius(20.f);
+  m_obstacle2.setOrigin({m_obstacle2.getRadius(), m_obstacle2.getRadius()});
+  m_obstacle2.setPointCount(100);
+  m_obstacle2.setFillColor(sf::Color::Green);
 }
 
 RayTracer::~RayTracer() {
@@ -17,81 +33,94 @@ RayTracer::~RayTracer() {
 }
 
 void RayTracer::run() {
-  const float fpsTarget = 120.0f;
-  const float targetFrameTime = 1.0f / fpsTarget;  // 120 FPS
-  const float ticksPerSecond = 500.0f;
-  const float targetTickTime = 1.0f / ticksPerSecond;  // 500 ticks per second
-
-  {
-    m_circle.setRadius(40.f);
-    m_circle.setOrigin({m_circle.getRadius(), m_circle.getRadius()});
-    m_circle.setPointCount(200);
-    m_circle.setFillColor(sf::Color(245, 176, 66));
-  }
-
-  auto frameStart = std::chrono::high_resolution_clock::now();
-  auto tickStart = std::chrono::high_resolution_clock::now();
-  auto secondStart = std::chrono::high_resolution_clock::now();
+  sf::Clock secondsClock;
 
   int fps = 0;
-  int ticks = 0;
 
   while (m_window.isOpen()) {
     processSFMLEvents();
 
-    auto tickEnd = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<float> tickDuration = tickEnd - tickStart;
+    updateRays();
 
-    if (tickDuration.count() >= targetTickTime) {
-      tickStart = tickEnd;
-      ticks++;
+    // Render frame
+    m_window.clear();
+    m_window.draw(m_obstacle2);
+    m_window.draw(m_obstacle);
+    m_window.draw(m_rays);
+    m_window.draw(m_sun);
+    m_textRenderer.draw(m_window);
+    m_window.display();
 
-      if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
-        sf::Vector2i pixelPosition = sf::Mouse::getPosition(m_window);
-        sf::Vector2f worldPosition = m_window.mapPixelToCoords(pixelPosition);
+    fps++;
 
-        float dx = worldPosition.x - m_circle.getPosition().x;
-        float dy = worldPosition.y - m_circle.getPosition().y;
-
-        if (pow((worldPosition.x - m_circle.getPosition().x), 2) +
-                pow((worldPosition.y - m_circle.getPosition().y), 2) <
-            pow(m_circle.getRadius(), 2)) {
-          m_circle.setPosition(worldPosition);
-        }
-      }
-    }
-
-    // Get current time and calculate elapsed time for frames
-    auto frameEnd = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<float> frameDuration = frameEnd - frameStart;
-
-    if (frameDuration.count() >= targetFrameTime) {
-      // Render frame
-      m_window.clear();
-      m_window.draw(m_circle);
-      m_window.display();
-      fps++;
-      frameStart = frameEnd;
-    }
-
-    auto secondEnd = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<float> secondDuration = secondEnd - secondStart;
-
-    if (secondDuration.count() >= 1.0f) {
-      std::cout << "Fps: " << fps << std::endl;
-      std::cout << "Ticks: " << ticks << std::endl;
+    if (secondsClock.getElapsedTime().asSeconds() >= 1.0f) {
+      m_textRenderer.setFpsText(fps);
       fps = 0;
-      ticks = 0;
-      secondStart = secondEnd;
-    }
-
-    while (std::chrono::high_resolution_clock::now() - tickStart < std::chrono::duration<float>(targetTickTime)) {
-      // No-op to busy-wait
+      secondsClock.restart();
     }
   }
 }
 
+void RayTracer::initializeRays() {
+  m_rays.setPrimitiveType(sf::PrimitiveType::Lines);
+  m_rays.resize(NUM_RAYS * 2);
+}
+
+void RayTracer::updateRays() {
+  sf::Vector2f circleCenter = m_sun.getPosition();
+
+  for (int i = 0; i < NUM_RAYS; ++i) {
+    float angle = i * (360.0f / NUM_RAYS);
+    // radian berechnen im Einheitskreis, da wir Richtungsvektor berechnen
+    float radian = angle * (M_PI / 180.0f);
+
+    sf::Vector2f direction(std::cos(radian), std::sin(radian));
+    sf::Vector2f rayEnd = circleCenter + direction * RAY_LENGTH;
+
+    float xStep = (rayEnd.x - circleCenter.x) / RAY_LENGTH;
+    float yStep = (rayEnd.y - circleCenter.y) / RAY_LENGTH;
+
+    for (int j = 0; j < RAY_LENGTH; j++) {
+      sf::Vector2f step = {j * xStep, j * yStep};
+
+      sf::Vector2f stepPosition = {circleCenter.x + step.x, circleCenter.y + step.y};
+
+      if (isPointInCircle(stepPosition, m_obstacle.getPosition(), m_obstacle.getRadius()) ||
+          isPointInCircle(stepPosition, m_obstacle2.getPosition(), m_obstacle2.getRadius())) {
+        rayEnd = stepPosition;
+        break;
+      }
+    }
+
+    m_rays[i * 2].position = circleCenter;
+    m_rays[i * 2].color = sf::Color(245, 176, 66);
+
+    m_rays[i * 2 + 1].position = rayEnd;
+    m_rays[i * 2 + 1].color = sf::Color::Yellow;
+  }
+}
+
 void RayTracer::processSFMLEvents() {
+  if (sf::Mouse::isButtonPressed(sf::Mouse::Button::Left)) {
+    sf::Vector2i pixelPosition = sf::Mouse::getPosition(m_window);
+    sf::Vector2f worldPosition = m_window.mapPixelToCoords(pixelPosition);
+
+    if (isPointInCircle(worldPosition, m_sun.getPosition(), m_sun.getRadius())) {
+      m_sun.setPosition(worldPosition);
+      return;
+    }
+
+    if (isPointInCircle(worldPosition, m_obstacle.getPosition(), m_obstacle.getRadius())) {
+      m_obstacle.setPosition(worldPosition);
+      return;
+    }
+
+    if (isPointInCircle(worldPosition, m_obstacle2.getPosition(), m_obstacle2.getRadius())) {
+      m_obstacle2.setPosition(worldPosition);
+      return;
+    }
+  }
+
   while (const std::optional event = m_window.pollEvent()) {
     if (event->is<sf::Event::Closed>()) {
       m_window.close();
@@ -105,4 +134,8 @@ void RayTracer::processSFMLEvents() {
       m_window.setView(newView);
     }
   }
+}
+
+bool RayTracer::isPointInCircle(sf::Vector2f point, sf::Vector2f circlePosition, float radius) {
+  return pow((point.x - circlePosition.x), 2) + pow((point.y - circlePosition.y), 2) < pow(radius, 2);
 }
