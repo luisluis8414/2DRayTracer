@@ -18,11 +18,15 @@ class RayTracer {
   sf::RenderWindow m_window;
   TextRenderer m_textRenderer;
 
+  sf::Shader m_rayShader;
+
   sf::CircleShape m_sun;
   sf::CircleShape m_obstacle;
   sf::CircleShape m_obstacle2;
 
   sf::VertexArray m_rays;
+
+  sf::RenderTexture m_renderTexture;
 
   void processSFMLEvents();
 

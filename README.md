@@ -1,4 +1,6 @@
-# League of Pixels
+# Simple 2D RayTracing
+
+![alt text](resources/screenshot.png)
 
 ## Build Instructions
 

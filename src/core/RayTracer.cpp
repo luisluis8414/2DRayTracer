@@ -2,28 +2,30 @@
 
 #include <SFML/Graphics.hpp>
 #include <SFML/Window.hpp>
-#include <chrono>
-#include <cmath>
-#include <iostream>
 
 RayTracer::RayTracer()
-    : m_window(sf::VideoMode({800, 600}), "2D RayTracer"), m_textRenderer("resources/fonts/arial.ttf") {
+    : m_window(sf::VideoMode({800, 600}), "2D RayTracer"),
+      m_textRenderer("resources/fonts/arial.ttf"),
+      m_renderTexture({800, 600}) {
   initializeRays();
 
   m_sun.setRadius(40.f);
   m_sun.setOrigin({m_sun.getRadius(), m_sun.getRadius()});
   m_sun.setPointCount(100);
   m_sun.setFillColor(sf::Color(245, 176, 66));
+  m_sun.setPosition({400, 300});
 
   m_obstacle.setRadius(80.f);
   m_obstacle.setOrigin({m_obstacle.getRadius(), m_obstacle.getRadius()});
   m_obstacle.setPointCount(100);
   m_obstacle.setFillColor(sf::Color::Blue);
+  m_obstacle.setPosition({200, 100});
 
   m_obstacle2.setRadius(20.f);
   m_obstacle2.setOrigin({m_obstacle2.getRadius(), m_obstacle2.getRadius()});
   m_obstacle2.setPointCount(100);
   m_obstacle2.setFillColor(sf::Color::Green);
+  m_obstacle2.setPosition({700, 500});
 }
 
 RayTracer::~RayTracer() {
@@ -69,10 +71,12 @@ void RayTracer::initializeRays() {
 void RayTracer::updateRays() {
   sf::Vector2f circleCenter = m_sun.getPosition();
 
+  float stepAngle = 360.0f / NUM_RAYS;
+  float deg_to_rad_fac = (M_PI / 180.0f);
   for (int i = 0; i < NUM_RAYS; ++i) {
-    float angle = i * (360.0f / NUM_RAYS);
+    float angle = i * stepAngle;
     // radian berechnen im Einheitskreis, da wir Richtungsvektor berechnen
-    float radian = angle * (M_PI / 180.0f);
+    float radian = angle * deg_to_rad_fac;
 
     sf::Vector2f direction(std::cos(radian), std::sin(radian));
     sf::Vector2f rayEnd = circleCenter + direction * RAY_LENGTH;
@@ -80,10 +84,11 @@ void RayTracer::updateRays() {
     float xStep = (rayEnd.x - circleCenter.x) / RAY_LENGTH;
     float yStep = (rayEnd.y - circleCenter.y) / RAY_LENGTH;
 
-    for (int j = 0; j < RAY_LENGTH; j++) {
-      sf::Vector2f step = {j * xStep, j * yStep};
+    sf::Vector2f stepIncrement = {xStep, yStep};
+    sf::Vector2f stepPosition = circleCenter + direction * m_sun.getRadius();
 
-      sf::Vector2f stepPosition = {circleCenter.x + step.x, circleCenter.y + step.y};
+    for (int j = 0; j < RAY_LENGTH; j++) {
+      stepPosition += stepIncrement;
 
       if (isPointInCircle(stepPosition, m_obstacle.getPosition(), m_obstacle.getRadius()) ||
           isPointInCircle(stepPosition, m_obstacle2.getPosition(), m_obstacle2.getRadius())) {
@@ -92,11 +97,11 @@ void RayTracer::updateRays() {
       }
     }
 
-    m_rays[i * 2].position = circleCenter;
+    m_rays[i * 2].position = circleCenter + direction * m_sun.getRadius();
     m_rays[i * 2].color = sf::Color(245, 176, 66);
 
     m_rays[i * 2 + 1].position = rayEnd;
-    m_rays[i * 2 + 1].color = sf::Color::Yellow;
+    m_rays[i * 2 + 1].color = sf::Color(245, 176, 66);
   }
 }
 
@@ -137,5 +142,7 @@ void RayTracer::processSFMLEvents() {
 }
 
 bool RayTracer::isPointInCircle(sf::Vector2f point, sf::Vector2f circlePosition, float radius) {
-  return pow((point.x - circlePosition.x), 2) + pow((point.y - circlePosition.y), 2) < pow(radius, 2);
+  float dx = point.x - circlePosition.x;
+  float dy = point.y - circlePosition.y;
+  return (dx * dx + dy * dy) < (radius * radius);
 }

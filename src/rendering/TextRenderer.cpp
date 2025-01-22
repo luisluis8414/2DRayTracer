@@ -16,7 +16,9 @@ void TextRenderer::setFpsText(int text) {
 void TextRenderer::draw(sf::RenderWindow& window) {
   sf::View originalView = window.getView();
 
-  window.setView(window.getDefaultView());
+  sf::View hudView(
+      sf::FloatRect({0, 0}, {static_cast<float>(window.getSize().x), static_cast<float>(window.getSize().y)}));
+  window.setView(hudView);
 
   sf::Vector2u windowSize = window.getSize();
   sf::FloatRect textBounds = m_fpsText.getLocalBounds();
