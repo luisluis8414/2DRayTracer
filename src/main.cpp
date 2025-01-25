@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "core/RayTracer.h"
+#include "core/RayTracer.hpp"
 
 int main() {
   RayTracer tracer;
